@@ -5,7 +5,7 @@ provider "aws" {
 resource "aws_code_deploy_deployment_group" "dev_deploy" {
     app_name = codepipeline
     deployment_group-name = "dev_deploy"
-    source_role_arn = "arn:aws:iam::763531322104:role/codedeploy-mlops-v1"
+    source_role_arn = var.DEPLOYMENT_ROLE_ARN
 
     auto_rollback_configuration {
         enabled = true
