@@ -1,0 +1,21 @@
+name: My CI/CD Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - feature/*
+
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Use DEPLOYMENT_ROLE_ARN
+      run: |
+        echo "DEPLOYMENT_ROLE_ARN is ${{ secrets.DEPLOYMENT_ROLE_ARN }}"
