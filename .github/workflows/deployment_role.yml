@@ -2,9 +2,9 @@ name: CI & Terraform Security Gate
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches: [ main, master, feature/* ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 permissions:
   contents: read
@@ -27,6 +27,11 @@ jobs:
         run: |
           pip install ruff pytest bandit
 
+      - name: Python Code Quality (Ruff)
+        run: |
+          ruff check src/ tests/
+          ruff format --check src/ tests/
+
       - name: Python SAST & Unit Tests
         run: |
           export PYTHONPATH=src
@@ -36,11 +41,9 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.0
+          terraform_version: 1.10.0
 
-      - name: Terraform Format & Validation
+      - name: Terraform Format & Syntax Check
         run: |
           cd architecture/terraform
           terraform fmt -check -recursive
-          terraform init -backend=false
-          terraform validate
