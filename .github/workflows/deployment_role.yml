@@ -1,21 +1,46 @@
-name: My CI/CD Workflow
+name: CI & Terraform Security Gate
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, feature/* ]
   pull_request:
-    branches:
-      - feature/*
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
-  my-job:
+  validate-and-test:
+    name: Code & IaC Security Audit
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Use DEPLOYMENT_ROLE_ARN
-      run: |
-        echo "DEPLOYMENT_ROLE_ARN is ${{ secrets.DEPLOYMENT_ROLE_ARN }}"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linters & test tools
+        run: |
+          pip install ruff pytest bandit
+
+      - name: Python SAST & Unit Tests
+        run: |
+          export PYTHONPATH=src
+          pytest tests/ -v
+          bandit -r src/ -ll
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Format & Validation
+        run: |
+          cd architecture/terraform
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate

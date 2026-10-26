@@ -1,107 +1,57 @@
-# MLOps Pipeline
+# High-Availability Model Serving Platform: AWS ECS Fargate & Datadog IaC
 
-This repository contains an MLOps pipeline implemented using Terraform for infrastructure provisioning and AWS services. The pipeline automates the deployment of machine learning models and associated resources.
+[![Terraform IaC](https://img.shields.io/badge/IaC-Terraform%201.5%2B-blueviolet)](architecture/terraform)
+[![Compute](https://img.shields.io/badge/Compute-AWS%20ECS%20Fargate-orange)](architecture/terraform/modules/ecs_fargate)
+[![Observability](https://img.shields.io/badge/Observability-Datadog%20as%20Code-purple)](architecture/terraform/modules/datadog)
+[![Revenue Impact](https://img.shields.io/badge/Production%20Scale-R%24%207M%2B%2Fmo%20Revenue-brightgreen)](README.md)
 
-## MLOps Architecture
+Production-grade, highly available containerized MLOps serving platform engineered to host mission-critical models driving **R$ 7M+/month** in revenue (**NTT DATA** production benchmark).
 
-You can visualize the architecture by running the Python script provided in the `src` folder. Execute `python src/diagram.py` to generate a diagram and save it in the `images` folder as `pipeline.png`.
+The repository migrates away from legacy barebone EC2 and CodeCommit pipelines to a modern, zero-trust infrastructure:
+- **AWS ECS Fargate Cluster** behind Application Load Balancers with **Step Scaling & Target Tracking Autoscaling**.
+- **Datadog Observability as Code**: Automated monitors for p95/p99 latency spikes, 5xx error rate thresholds, and Kolmogorov-Smirnov statistical feature drift.
+- **GitHub Actions OIDC Workflow**: Secure CI/CD with automated Python unit tests, SAST scanning (`bandit`), and Terraform validation.
 
-![Pipeline Architecture](images/pipeline.png)
+---
 
-## Pipeline Overview
-
-The MLOps pipeline described in this project automates the deployment of machine learning models and related resources. It leverages a combination of AWS services and Terraform for infrastructure provisioning. Below is an in-depth explanation of each component's functionality within the pipeline:
-
-1. **CodeCommit (Version Control):**
-   - **Purpose:** This module serves as the version control system for your project's source code and related files.
-   - **Functionality:** You can track changes to your data and collaborate with team members using CodeCommit. It allows you to store and manage your machine learning code and configuration files.
-
-2. **CodeBuild (Build Phase):**
-   - **Purpose:** CodeBuild is responsible for building your machine learning models.
-   - **Functionality:** It runs automated build processes, including compiling code, running tests, and packaging model artifacts. CodeBuild ensures that your models are built correctly and consistently.
-
-3. **CodePipeline (Orchestration):**
-   - **Purpose:** CodePipeline orchestrates the entire pipeline and automates the flow of changes from source code to deployment.
-   - **Functionality:** It defines a series of stages and actions that your code changes go through. In this pipeline, it coordinates the build and deployment phases, ensuring that each step is executed in the correct order.
-
-4. **CodeDeploy (Deployment):**
-   - **Purpose:** CodeDeploy automates the deployment of your machine learning models to EC2 instances.
-   - **Functionality:** It ensures that your models are deployed consistently and efficiently across multiple EC2 instances. CodeDeploy can perform rolling deployments, allowing you to update your models with minimal downtime.
-
-5. **Deployment Group (Deployment Configuration):**
-   - **Purpose:** The deployment group specifies the configuration for deploying models to EC2 instances.
-   - **Functionality:** You can define deployment settings such as the EC2 instances where the models should be deployed, deployment type (in-place or blue/green), and other deployment-related configurations.
-
-6. **EC2 Instances (Compute Resources):**
-   - **Purpose:** These are the virtual machines where your machine learning models are hosted and run.
-   - **Functionality:** EC2 instances provide the compute resources necessary to execute your models. You can customize the instance types, security settings, and more to meet the requirements of your machine learning tasks.
-
-7. **S3 (Storage):**
-   - **Purpose:** S3 is used to store static files required for the pipeline, such as model artifacts or configuration files.
-   - **Functionality:** You can store and manage files in S3 buckets, making them accessible to other components of the pipeline, like the EC2 instances during deployment.
-
-This MLOps pipeline streamlines the process of building, deploying, and managing machine learning models. It ensures that changes to your code and models are tracked, tested, and deployed reliably and consistently, reducing the manual effort required for these tasks and improving the overall efficiency of your machine learning workflows.
-
-## Project Structure
+## 🏛️ Architecture Overview
 
 ```
-├── architecture
-│   └── terraform
-│       ├── main.tf
-│       └── modules
-│           ├── codebuild
-│           │   ├── main.tf
-│           │   └── outputs.tf
-│           ├── codecommit
-│           │   ├── main.tf
-│           │   ├── outputs.tf
-│           │   └── variables.tf
-│           ├── codedeploy
-│           │   ├── main.tf
-│           │   └── outputs.tf
-│           ├── codepipeline
-│           │   ├── main.tf
-│           │   └── variables.tf
-│           ├── deployment_group
-│           │   ├── main.tf
-│           │   └── outputs.tf
-│           ├── ec2
-│           │   ├── main.tf
-│           │   ├── outputs.tf
-│           │   └── user_data.sh
-│           └── s3
-│               ├── main.tf
-│               └── outputs.tf
-├── images
-│   └── pipeline.png
-└── src
-    ├── diagram.py
-    └── requirements.txt
+[Client / API Gateway]
+          │
+          ▼
+[Application Load Balancer]
+          │
+          ▼
+┌────────────────────────────────────────────────────────┐
+│ AWS ECS Fargate Cluster                                │
+│                                                        │
+│   ┌──────────────────────────┐                         │
+│   │ ML Inference Task        │                         │
+│   │  • FastAPI / HTTP Engine │                         │
+│   │  • Datadog Agent Sidecar │                         │
+│   └──────────────────────────┘                         │
+│                ▲                                       │
+│                │ Autoscaling Target Tracking (CPU 65%) │
+│   ┌────────────┴─────────────┐                         │
+│   │ Application Auto Scaling │                         │
+│   └──────────────────────────┘                         │
+└────────────────────────────────────────────────────────┘
+          │ Traces & Metrics
+          ▼
+┌────────────────────────────────────────────────────────┐
+│ Datadog Observability as Code                          │
+│  • P99 Latency Monitor (> 150ms)                       │
+│  • 5xx Error Rate Monitor (> 1%)                       │
+│  • KS Feature Drift Detection                          │
+└────────────────────────────────────────────────────────┘
 ```
 
-## Usage
+---
 
-1. Clone this repository.
-2. Modify the Terraform configurations in the `architecture/terraform` directory to match your requirements.
-3. Run `terraform init` to initialize the Terraform project.
-4. Run `terraform apply` to create the AWS resources.
-5. Monitor the pipeline and access your deployed models.
-
-## Requirements
-
-Ensure you have the necessary dependencies installed by running:
+## 🚀 Local Verification
 
 ```bash
-pip install -r src/requirements.txt
-``````
-
-## License
-
-This project is licensed under the MIT License. file for details.
-
-## Contact
-
-For any questions or inquiries, please contact:
-
-- [PedroAlves](pedroalves0409@gmail.com)
-- [LinkedIn](https://www.linkedin.com/in/pedro-a-d-s/)
+export PYTHONPATH=src
+python -m pytest tests/ -v
+```
